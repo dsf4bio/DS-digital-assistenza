@@ -50,8 +50,9 @@
       color: var(--text);
       line-height: 1.6;
       min-height: 100vh;
-      height: 100vh;
-      overflow: hidden;
+      height: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
     }
@@ -1931,44 +1932,109 @@
       touchStartY: 0,
       lastTouchTime: 0,
       promoItemWidth: 0,
-      promoGap: 20
+      promoGap: 20,
+      isDragging: false
     };
 
     // --- ELEMENTI DEL DOM ---
     const elements = {
-      parallaxBg: document.getElementById('parallaxBg'),
-      searchInput: document.getElementById('searchInput'),
-      voiceSearch: document.getElementById('voiceSearch'),
-      categoriesNav: document.getElementById('categoriesNav'),
-      promoTrack: document.getElementById('promoTrack'),
-      carouselDots: document.getElementById('carouselDots'),
-      dishModal: document.getElementById('dishModal'),
-      modalImage: document.getElementById('modalImage'),
-      modalTitle: document.getElementById('modalTitle'),
-      modalPrice: document.getElementById('modalPrice'),
-      modalDescription: document.getElementById('modalDescription'),
-      modalStory: document.getElementById('modalStory'),
-      modalIngredients: document.getElementById('modalIngredients'),
-      modalPairings: document.getElementById('modalPairings'),
-      modalCustomization: document.getElementById('modalCustomization'),
-      modalGallery: document.getElementById('modalGallery')
+      parallaxBg: null,
+      searchInput: null,
+      voiceSearch: null,
+      categoriesNav: null,
+      promoTrack: null,
+      carouselDots: null,
+      dishModal: null,
+      modalImage: null,
+      modalTitle: null,
+      modalPrice: null,
+      modalDescription: null,
+      modalStory: null,
+      modalIngredients: null,
+      modalPairings: null,
+      modalCustomization: null,
+      modalGallery: null
     };
+
+    // --- FUNZIONI DI UTILITÀ ---
+    // Ottiene la trasformazione X corrente di un elemento
+    function getTranslateX(element) {
+      if (!element) return 0;
+      
+      const style = window.getComputedStyle(element);
+      const matrix = style.transform;
+      
+      if (matrix === 'none') return 0;
+      
+      try {
+        const values = matrix.match(/matrix.*\((.+)\)/)[1].split(', ');
+        return parseFloat(values[4]);
+      } catch (e) {
+        console.error('Errore nel parsing della trasformazione:', e);
+        return 0;
+      }
+    }
+
+    // Calcola le dimensioni del carosello
+    function updatePromoDimensions() {
+      if (!elements.promoTrack) return;
+      
+      const containerWidth = elements.promoTrack.parentElement.clientWidth;
+      const itemWidth = containerWidth * 0.9;
+      
+      appState.promoItemWidth = itemWidth;
+      appState.promoGap = 20;
+    }
 
     // --- FUNZIONI PRINCIPALI ---
     // Inizializzazione dell'app
     function initApp() {
-      setupEventListeners();
-      initParallaxEffect();
-      initSearch();
-      initVoiceSearch();
-      initPromoCarousel();
-      updateUI();
-      
-      // Forza il calcolo delle dimensioni iniziali
-      setTimeout(() => {
-        updatePromoDimensions();
-        animateToIndex(0);
-      }, 100);
+      try {
+        // Inizializza gli elementi del DOM
+        initDOMElements();
+        
+        // Imposta i listeners
+        setupEventListeners();
+        
+        // Inizializza gli effetti
+        initParallaxEffect();
+        initSearch();
+        initVoiceSearch();
+        
+        // Inizializza il carosello
+        initPromoCarousel();
+        
+        // Aggiorna l'UI
+        updateUI();
+        
+        // Calcola le dimensioni iniziali
+        setTimeout(() => {
+          updatePromoDimensions();
+          animateToIndex(0);
+        }, 100);
+      } catch (error) {
+        console.error('Errore durante l\'inizializzazione:', error);
+      }
+    }
+
+    // Inizializza gli elementi del DOM
+    function initDOMElements() {
+      elements.parallaxBg = document.getElementById('parallaxBg');
+      elements.searchInput = document.getElementById('searchInput');
+      elements.voiceSearch = document.getElementById('voiceSearch');
+      elements.categoriesNav = document.getElementById('categoriesNav');
+      elements.promoTrack = document.getElementById('promoTrack');
+      elements.carouselDots = document.getElementById('carouselDots');
+      elements.dishModal = document.getElementById('dishModal');
+      elements.modalImage = document.getElementById('modalImage');
+      elements.modalTitle = document.getElementById('modalTitle');
+      elements.modalPrice = document.getElementById('modalPrice');
+      elements.modalDescription = document.getElementById('modalDescription');
+      elements.modalStory = document.getElementById('modalStory');
+      elements.modalIngredients = document.getElementById('modalIngredients');
+      elements.modalPairings = document.getElementById('modalPairings');
+      elements.modalCustomization = document.getElementById('modalCustomization');
+      elements.modalGallery = document.getElementById('modalGallery');
     }
 
     // Imposta tutti gli event listeners
@@ -1981,14 +2047,20 @@
       });
 
       // Ricerca
-      elements.searchInput.addEventListener('input', handleSearch);
+      if (elements.searchInput) {
+        elements.searchInput.addEventListener('input', handleSearch);
+      }
       
       // Voice search
-      elements.voiceSearch.addEventListener('click', startVoiceSearch);
+      if (elements.voiceSearch) {
+        elements.voiceSearch.addEventListener('click', startVoiceSearch);
+      }
     }
 
     // Inizializza l'effetto parallasse avanzato
     function initParallaxEffect() {
+      if (!elements.parallaxBg) return;
+      
       document.addEventListener('mousemove', (e) => {
         if (window.innerWidth < 768) return; // Disabilita su mobile
         
@@ -2005,6 +2077,8 @@
 
     // Inizializza la ricerca avanzata
     function initSearch() {
+      if (!elements.searchInput) return;
+      
       let debounceTimer;
       
       elements.searchInput.addEventListener('input', () => {
@@ -2018,6 +2092,8 @@
 
     // Inizializza la ricerca vocale (simulazione)
     function initVoiceSearch() {
+      if (!elements.voiceSearch) return;
+      
       elements.voiceSearch.addEventListener('click', () => {
         elements.voiceSearch.style.color = '#4CAF50';
         elements.voiceSearch.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
@@ -2034,17 +2110,10 @@
       });
     }
 
-    // Aggiorna le dimensioni del carosello
-    function updatePromoDimensions() {
-      const containerWidth = elements.promoTrack.parentElement.clientWidth;
-      const itemWidth = containerWidth * 0.9;
-      
-      appState.promoItemWidth = itemWidth;
-      appState.promoGap = 20;
-    }
-
     // Inizializza il carousel promozioni
     function initPromoCarousel() {
+      if (!elements.promoTrack || !elements.carouselDots) return;
+      
       // Gestione ridimensionamento finestra
       window.addEventListener('resize', () => {
         updatePromoDimensions();
@@ -2052,45 +2121,21 @@
       });
       
       // Gestione touch
-      let isDragging = false;
       let startX = 0;
       let startScrollLeft = 0;
       
-      // Funzione per ottenere la posizione X corrente
-      function getCurrentX() {
-        const transform = window.getComputedStyle(elements.promoTrack).transform;
-        if (transform === 'none') return 0;
-        
-        const matrix = transform.match(/matrix.*\((.+)\)/)[1].split(', ');
-        return parseFloat(matrix[4]);
-      }
-      
-      // Funzione per calcolare l'indice più vicino
-      function calculateNearestIndex() {
-        const currentX = getCurrentX();
-        const containerWidth = elements.promoTrack.parentElement.clientWidth;
-        const maxTranslate = -(appState.promoItemWidth * (elements.promoTrack.children.length - 1) + 
-                              appState.promoGap * (elements.promoTrack.children.length - 1));
-        
-        // Calcola la posizione percentuale
-        const position = currentX / maxTranslate;
-        
-        // Calcola l'indice più vicino
-        return Math.round(position * (elements.promoTrack.children.length - 1));
-      }
-      
       // Gestione touch start
       elements.promoTrack.addEventListener('touchstart', (e) => {
-        isDragging = true;
+        appState.isDragging = true;
         startX = e.touches[0].clientX;
-        startScrollLeft = getCurrentX();
+        startScrollLeft = getTranslateX(elements.promoTrack);
         elements.promoTrack.style.transition = 'none';
         appState.lastTouchTime = Date.now();
       });
       
       // Gestione touch move
       elements.promoTrack.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
+        if (!appState.isDragging) return;
         e.preventDefault();
         
         const currentX = e.touches[0].clientX;
@@ -2103,12 +2148,12 @@
       
       // Gestione touch end
       elements.promoTrack.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
+        if (!appState.isDragging) return;
+        appState.isDragging = false;
         
         // Calcola la velocità del gesto
         const timeDiff = Date.now() - appState.lastTouchTime;
-        const currentX = getCurrentX();
+        const currentX = getTranslateX(elements.promoTrack);
         let newIndex = appState.currentPromoIndex;
         
         // Se il gesto è veloce, considera lo swipe
@@ -2121,8 +2166,81 @@
           }
         } else {
           // Altrimenti, calcola l'indice più vicino
-          newIndex = calculateNearestIndex();
+          const containerWidth = elements.promoTrack.parentElement.clientWidth;
+          const totalWidth = elements.promoTrack.scrollWidth;
+          const maxTranslate = -(totalWidth - containerWidth);
+          
+          if (maxTranslate === 0) return;
+          
+          // Calcola la posizione percentuale
+          const position = currentX / maxTranslate;
+          
+          // Calcola l'indice più vicino
+          newIndex = Math.round(position * (elements.promoTrack.children.length - 1));
         }
+        
+        // Assicura che l'indice sia valido
+        newIndex = Math.max(0, Math.min(newIndex, elements.promoTrack.children.length - 1));
+        
+        // Anima al nuovo indice
+        animateToIndex(newIndex);
+      });
+      
+      // Gestione mouse per desktop
+      elements.promoTrack.addEventListener('mousedown', (e) => {
+        appState.isDragging = true;
+        startX = e.clientX;
+        startScrollLeft = getTranslateX(elements.promoTrack);
+        elements.promoTrack.style.transition = 'none';
+        appState.lastTouchTime = Date.now();
+      });
+      
+      elements.promoTrack.addEventListener('mousemove', (e) => {
+        if (!appState.isDragging) return;
+        e.preventDefault();
+        
+        const currentX = e.clientX;
+        const diff = currentX - startX;
+        const newTranslate = startScrollLeft + diff;
+        
+        elements.promoTrack.style.transform = `translateX(${newTranslate}px)`;
+        appState.lastTouchTime = Date.now();
+      });
+      
+      document.addEventListener('mouseup', () => {
+        if (!appState.isDragging) return;
+        appState.isDragging = false;
+        
+        // Calcola la velocità del gesto
+        const timeDiff = Date.now() - appState.lastTouchTime;
+        const currentX = getTranslateX(elements.promoTrack);
+        let newIndex = appState.currentPromoIndex;
+        
+        // Se il gesto è veloce, considera lo swipe
+        if (timeDiff < 300) {
+          const diff = startX - event.clientX;
+          if (Math.abs(diff) > 50) {
+            newIndex = diff > 0 ? 
+              Math.min(newIndex + 1, elements.promoTrack.children.length - 1) : 
+              Math.max(newIndex - 1, 0);
+          }
+        } else {
+          // Altrimenti, calcola l'indice più vicino
+          const containerWidth = elements.promoTrack.parentElement.clientWidth;
+          const totalWidth = elements.promoTrack.scrollWidth;
+          const maxTranslate = -(totalWidth - containerWidth);
+          
+          if (maxTranslate === 0) return;
+          
+          // Calcola la posizione percentuale
+          const position = currentX / maxTranslate;
+          
+          // Calcola l'indice più vicino
+          newIndex = Math.round(position * (elements.promoTrack.children.length - 1));
+        }
+        
+        // Assicura che l'indice sia valido
+        newIndex = Math.max(0, Math.min(newIndex, elements.promoTrack.children.length - 1));
         
         // Anima al nuovo indice
         animateToIndex(newIndex);
@@ -2134,15 +2252,11 @@
           animateToIndex(index);
         });
       });
-      
-      // Inizializza le dimensioni
-      updatePromoDimensions();
     }
 
     // Anima al nuovo indice del carousel
     function animateToIndex(index) {
-      // Assicurati che l'indice sia valido
-      index = Math.max(0, Math.min(index, elements.promoTrack.children.length - 1));
+      if (!elements.promoTrack) return;
       
       // Calcola la nuova posizione
       const translateX = -((appState.promoItemWidth + appState.promoGap) * index);
@@ -2334,6 +2448,8 @@
       // Mostra il modal
       if (elements.dishModal) {
         elements.dishModal.classList.add('active');
+        // Blocca lo scrolling del body quando il modal è aperto
+        document.body.style.overflow = 'hidden';
       }
     }
 
@@ -2341,15 +2457,15 @@
     function closeModal() {
       if (elements.dishModal) {
         elements.dishModal.classList.remove('active');
+        // Riattiva lo scrolling del body
+        document.body.style.overflow = 'auto';
       }
     }
 
     // --- INIZIALIZZAZIONE ---
     document.addEventListener('DOMContentLoaded', () => {
-      // Assicura che il DOM sia completamente caricato
-      setTimeout(() => {
-        initApp();
-      }, 100);
+      // Aggiungi un piccolo ritardo per assicurare che il DOM sia completamente caricato
+      setTimeout(initApp, 50);
     });
   </script>
 </body>
